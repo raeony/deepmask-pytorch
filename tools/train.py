@@ -260,7 +260,15 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 epoch, i, len(train_loader), batch_time=batch_time, lr=optimizer.param_groups[0]['lr'],
                 data_time=data_time, mask_loss=mask_losses, score_loss=score_losses))
             print_speed(epoch * len(train_loader) + i + 1, batch_time.avg, args.maxepoch * len(train_loader))
-
+        step = epoch * len(train_loader) + i + 1
+        if head_status[0] == 0:
+            mask_true_iSz = torch.nn.functional.interpolate(target, size=(args.iSz, args.iSz))
+            mask_true = torch.nn.functional.pad(mask_true_iSz, (16, 16, 16, 16))
+            mask_pred_iSz = torch.nn.functional.interpolate(output[0], size=(args.iSz, args.iSz))
+            mask_pred = torch.nn.functional.pad(mask_pred, (16, 16, 16, 16))
+            writer.add_images('train/img', img, global_step=step, dataformats='NCHW')
+            writer.add_images('train/mask_true', mask_true, global_step=step, dataformats='NCHW')
+            writer.add_images('train/mask_pred', mask_pred, global_step=step, dataformats='NCHW')
     writer.add_scalar('train_loss/mask_loss', mask_losses.avg, epoch)
     writer.add_scalar('train_loss/score_losses', score_losses.avg, epoch)
 
@@ -294,7 +302,14 @@ def validate(val_loader, model, criterion, epoch=0):
             else:
                 score_losses.update(loss.item(), img.size(0))
                 score_meter.add(output[head_status[0]], target)
-
+            if head_status[0] == 0:
+                mask_true_iSz = torch.nn.functional.interpolate(target, size=(args.iSz, args.iSz))
+                mask_true = torch.nn.functional.pad(mask_true_iSz, (16, 16, 16, 16))
+                mask_pred_iSz = torch.nn.functional.interpolate(output[0], size=(args.iSz, args.iSz))
+                mask_pred = torch.nn.functional.pad(mask_pred_iSz, (16, 16, 16, 16))
+                writer.add_images('val/img', img, global_step=epoch, dataformats='NCHW')
+                writer.add_images('val/mask_true', mask_true, global_step=epoch, dataformats='NCHW')
+                writer.add_images('val/mask_pred', mask_pred, global_step=epoch, dataformats='NCHW')
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
